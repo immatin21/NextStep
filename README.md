@@ -14,6 +14,10 @@ When people face complicated, stressful dilemmas—like overlapping deadlines, b
 
 ---
 
+## Live URL : 
+    Client : https://next-step-client.vercel.app
+    Backend : https://nextstep-server.onrender.com
+
 ## The Jugaad Challenge
 
 > **Challenge Prompt:** *“Identify at least one problem that this brief does not mention, and explain how you handled it. What did you notice that we didn’t tell you to notice?”*
