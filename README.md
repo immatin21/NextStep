@@ -187,12 +187,14 @@ The data model uses an **append-only versioning strategy** with foreign key casc
 ```prisma
 model Situation {
   id             String             @id
-  userId         String?
+  accessToken    String?
   currentVersion Int                @default(1)
   status         String             @default("active")
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   versions       SituationVersion[]
+
+  @@index([accessToken])
 }
 
 model SituationVersion {
@@ -272,8 +274,8 @@ model IdempotencyRecord {
 
 ## What We Skipped and Why
 
-1. **User Authentication & Passwords:**  
-   *Why skipped:* When someone is experiencing an acute panic crisis at 2 AM with a deadline in hours, a mandatory sign-up wall, email verification, or password form creates fatal drop-off (38% of beta users abandoned on delays). NextStep uses instant anonymous sessions with unique `situation_id` handles.
+1. **User Accounts & Authentication (`User` Model):**  
+   *Why skipped:* When someone is experiencing an acute panic crisis at 2 AM with a deadline in hours, a mandatory sign-up wall, email verification, or password form creates fatal drop-off (38% of beta users abandoned on delays). NextStep intentionally eliminates the `User` model, avoiding storage of Personally Identifiable Information (PII). Instead, it uses instant anonymous sessions secured via cryptographic `accessToken` capabilities.
 2. **Heavy State Management Libraries (Redux / Zustand):**  
    *Why skipped:* The frontend state flow is linear (Input &rarr; Analysis &rarr; Reassessment). Standard React hooks and modular API services keep the client bundle size under 200KB, ensuring rapid load times on mobile connections.
 3. **Dead / Unused Endpoints (`GET /scenarios`):**  

@@ -21,26 +21,14 @@ enum ConfidenceLevel {
 }
 
 
-model User {
-  id         String      @id @default(uuid())
-  email      String      @unique
-  createdAt  DateTime    @default(now())
-  situations Situation[]
-  auditLogs  AuditLog[]
-}
-
-
 model Situation {
   id             String             @id 
-  userId         String?
-  user           User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken    String?
   currentVersion Int                @default(1)
   status         String             @default("active") 
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   versions       SituationVersion[]
-  @@index([userId])
   @@index([accessToken])
 }
 
@@ -84,11 +72,8 @@ model IdempotencyRecord {
 
 model AuditLog {
   id          String   @id @default(uuid())
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   action      String   
   payload     Json?   
   ipAddress   String?
   createdAt   DateTime @default(now())
-  @@index([userId])
 }

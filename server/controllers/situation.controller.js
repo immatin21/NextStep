@@ -130,7 +130,12 @@ export async function createSituation(req, res) {
       access_token: accessToken,
     };
 
-    await completeIdempotency(idempotencyKey, situationId, 200, responsePayload);
+    await completeIdempotency(
+      idempotencyKey,
+      situationId,
+      200,
+      responsePayload,
+    );
 
     res.setHeader("X-Cache", "MISS");
     res.setHeader("X-Access-Token", accessToken);
@@ -163,7 +168,8 @@ export async function getSituation(req, res) {
 
     if (!verifySituationAccess(situation, req)) {
       return res.status(403).json({
-        error: "Access denied. A valid X-Access-Token header is required to access this situation.",
+        error:
+          "Access denied. A valid X-Access-Token header is required to access this situation.",
       });
     }
 
@@ -208,7 +214,8 @@ export async function updateSituation(req, res) {
 
     if (!verifySituationAccess(situation, req)) {
       return res.status(403).json({
-        error: "Access denied. A valid X-Access-Token header is required to update this situation.",
+        error:
+          "Access denied. A valid X-Access-Token header is required to update this situation.",
       });
     }
 
@@ -300,7 +307,8 @@ export async function deleteSituationData(req, res) {
 
     if (!verifySituationAccess(existing, req)) {
       return res.status(403).json({
-        error: "Access denied. A valid X-Access-Token header is required to delete this situation.",
+        error:
+          "Access denied. A valid X-Access-Token header is required to delete this situation.",
       });
     }
 

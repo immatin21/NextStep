@@ -1,13 +1,23 @@
 import "dotenv/config";
 
 const CRISIS_HELPLINES = [
-  { name: "Tele-MANAS (Govt of India)", contact: "14416 or 1800-891-4416", hours: "24/7, Toll-free" },
+  {
+    name: "Tele-MANAS (Govt of India)",
+    contact: "14416 or 1800-891-4416",
+    hours: "24/7, Toll-free",
+  },
   { name: "AASRA Helpline", contact: "+91 9820466726", hours: "24/7" },
-  { name: "Vandrevala Foundation", contact: "+91 9999 666 555", hours: "24/7, Multilingual" }
+  {
+    name: "Vandrevala Foundation",
+    contact: "+91 9999 666 555",
+    hours: "24/7, Multilingual",
+  },
 ];
 
 function buildPrompt(rawInput, clientTime, version, previousVersion) {
-  const timeContext = clientTime ? `User Local Time: ${clientTime}` : `Server Time: ${new Date().toISOString()}`;
+  const timeContext = clientTime
+    ? `User Local Time: ${clientTime}`
+    : `Server Time: ${new Date().toISOString()}`;
 
   let prompt = `You are NextStep, an AI personal decision assistant for people facing messy real-life situations.
 Your goal: Help the user cut through overwhelm by identifying what matters, prioritizing, and picking the single immediate next action.
@@ -64,10 +74,12 @@ If top priority changed, explain why in priorities[0].reason.
 }
 
 async function callMockAPI(rawInput, clientTime, candidateId, chaos) {
-  const baseUrl = process.env.MOCK_API_URL || "https://nextstepmockapi.onrender.com";
+  const baseUrl =
+    process.env.MOCK_API_URL || "https://nextstepmockapi.onrender.com";
   const headers = {
     "Content-Type": "application/json",
-    "X-Candidate-Id": candidateId || process.env.CANDIDATE_ID || "candidate@nextstep.test",
+    "X-Candidate-Id":
+      candidateId || process.env.CANDIDATE_ID || "candidate@nextstep.test",
   };
   if (chaos) headers["X-Chaos"] = chaos;
 
@@ -86,7 +98,8 @@ async function callMockAPI(rawInput, clientTime, candidateId, chaos) {
       signal: controller.signal,
     });
     clearTimeout(timer);
-    if (!res.ok) throw new Error(`Mock API responded with status ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Mock API responded with status ${res.status}`);
     return await res.json();
   } catch (err) {
     clearTimeout(timer);
@@ -105,7 +118,10 @@ async function callGemini(prompt, apiKey) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: "application/json",
+        },
       }),
       signal: controller.signal,
     });
@@ -127,7 +143,10 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
   } else if (typeof rawData === "string") {
     let text = rawData.trim();
     if (text.startsWith("```")) {
-      text = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+      text = text
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/```\s*$/, "")
+        .trim();
     }
     try {
       parsed = JSON.parse(text);
@@ -139,7 +158,12 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
 
   if (!parsed) throw new Error("Could not parse AI response as JSON");
 
-  const validModes = ["standard", "support", "out_of_scope", "needs_clarification"];
+  const validModes = [
+    "standard",
+    "support",
+    "out_of_scope",
+    "needs_clarification",
+  ];
   let mode = validModes.includes(parsed.mode) ? parsed.mode : "standard";
 
   const lower = (rawInput || "").toLowerCase();
@@ -154,10 +178,32 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
     "favorite food",
   ];
   const hasDilemmaIndicators = [
-    "deadline", "urgent", "hospital", "money", "evict", "exam", "viva",
-    "partner", "landlord", "fail", "broken", "stolen", "sick", "fired",
-    "manager", "hr", "trouble", "scared", "stress", "help", "problem",
-    "decision", "choose", "what should i do", "kal submission", "paise"
+    "deadline",
+    "urgent",
+    "hospital",
+    "money",
+    "evict",
+    "exam",
+    "viva",
+    "partner",
+    "landlord",
+    "fail",
+    "broken",
+    "stolen",
+    "sick",
+    "fired",
+    "manager",
+    "hr",
+    "trouble",
+    "scared",
+    "stress",
+    "help",
+    "problem",
+    "decision",
+    "choose",
+    "what should i do",
+    "kal submission",
+    "paise",
   ].some((k) => lower.includes(k));
 
   let outOfScopeSummary = null;
@@ -171,11 +217,18 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
     mode = "out_of_scope";
     outOfScopeSummary =
       "NextStep is an AI personal decision assistant for real-life dilemmas and stressful situations. It does not write essays, homework, or generate automated assignments.";
-  } else if (casualKeywords.some((k) => lower.includes(k)) && !hasDilemmaIndicators) {
+  } else if (
+    casualKeywords.some((k) => lower.includes(k)) &&
+    !hasDilemmaIndicators
+  ) {
     mode = "out_of_scope";
     outOfScopeSummary =
       "This looks like casual conversation or a general inquiry rather than a personal decision dilemma. NextStep is specifically designed to help people prioritize and make decisions during messy, high-stress situations.";
-  } else if (lower.includes("what's the point") || lower.includes("falling apart") || lower.includes("tired of all of it")) {
+  } else if (
+    lower.includes("what's the point") ||
+    lower.includes("falling apart") ||
+    lower.includes("tired of all of it")
+  ) {
     mode = "support";
   }
 
@@ -185,25 +238,35 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
   let support = null;
   if (mode === "support") {
     support = {
-      message: parsed.support?.message || "It sounds like you're carrying an overwhelming amount of weight right now. You don't have to tackle this alone, and it's okay to step back.",
-      resources: parsed.support?.resources?.length ? parsed.support.resources : CRISIS_HELPLINES,
-      offer_to_continue: "Whenever you feel up to it, we can return to look at things one small step at a time."
+      message:
+        parsed.support?.message ||
+        "It sounds like you're carrying an overwhelming amount of weight right now. You don't have to tackle this alone, and it's okay to step back.",
+      resources: parsed.support?.resources?.length
+        ? parsed.support.resources
+        : CRISIS_HELPLINES,
+      offer_to_continue:
+        "Whenever you feel up to it, we can return to look at things one small step at a time.",
     };
     return {
       situation_id: situationId,
       version,
       server_time: new Date().toISOString(),
       mode: "support",
-      summary: parsed.summary || "You are experiencing overwhelming stress across multiple areas.",
+      summary:
+        parsed.summary ||
+        "You are experiencing overwhelming stress across multiple areas.",
       issues: [],
       priorities: [],
       next_action: null,
       clarifying_questions: [],
       missing_information: [],
       risk_flags: ["emotional_distress_detected"],
-      confidence: { level: "high", reasons: ["Safety crisis filter triggered compassionate support mode."] },
-      changes: version > 1 ? (parsed.changes || []) : [],
-      support
+      confidence: {
+        level: "high",
+        reasons: ["Safety crisis filter triggered compassionate support mode."],
+      },
+      changes: version > 1 ? parsed.changes || [] : [],
+      support,
     };
   }
 
@@ -227,7 +290,7 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
         level: "high",
         reasons: ["No situational dilemma or decision pressure detected."],
       },
-      changes: version > 1 ? (parsed.changes || []) : [],
+      changes: version > 1 ? parsed.changes || [] : [],
       support: null,
     };
   }
@@ -238,7 +301,7 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
     nextAction = {
       text: top?.action || "Address the primary issue",
       issue_id: top?.issue_id || issues[0]?.id || "iss_1",
-      why: top?.reason || "Highest impact next step"
+      why: top?.reason || "Highest impact next step",
     };
   }
 
@@ -252,31 +315,46 @@ function cleanAndNormalize(rawData, situationId, version, rawInput) {
       id: iss.id && /^iss_[0-9]+$/.test(iss.id) ? iss.id : `iss_${i + 1}`,
       title: iss.title || `Issue ${i + 1}`,
       category: iss.category || "other",
-      urgency: typeof iss.urgency === "number" ? Math.min(Math.max(iss.urgency, 1), 5) : 3,
+      urgency:
+        typeof iss.urgency === "number"
+          ? Math.min(Math.max(iss.urgency, 1), 5)
+          : 3,
       deadline: iss.deadline || null,
-      depends_on: Array.isArray(iss.depends_on) ? iss.depends_on : []
+      depends_on: Array.isArray(iss.depends_on) ? iss.depends_on : [],
     })),
     priorities: priorities.map((p, i) => ({
       rank: typeof p.rank === "number" ? p.rank : i + 1,
       issue_id: p.issue_id || `iss_${i + 1}`,
       action: p.action || "Take immediate next step",
       reason: p.reason || "High relative urgency",
-      estimated_minutes: typeof p.estimated_minutes === "number" ? p.estimated_minutes : 15
+      estimated_minutes:
+        typeof p.estimated_minutes === "number" ? p.estimated_minutes : 15,
     })),
     next_action: nextAction,
-    clarifying_questions: Array.isArray(parsed.clarifying_questions) ? parsed.clarifying_questions : [],
-    missing_information: Array.isArray(parsed.missing_information) ? parsed.missing_information : [],
+    clarifying_questions: Array.isArray(parsed.clarifying_questions)
+      ? parsed.clarifying_questions
+      : [],
+    missing_information: Array.isArray(parsed.missing_information)
+      ? parsed.missing_information
+      : [],
     risk_flags: Array.isArray(parsed.risk_flags) ? parsed.risk_flags : [],
-    confidence: parsed.confidence || { level: "medium", reasons: ["Assessment structured successfully."] },
-    changes: version > 1 ? (parsed.changes || []) : [],
-    support: null
+    confidence: parsed.confidence || {
+      level: "medium",
+      reasons: ["Assessment structured successfully."],
+    },
+    changes: version > 1 ? parsed.changes || [] : [],
+    support: null,
   };
 }
 
 function getDegradedFallback(rawInput, situationId, version) {
   const lower = (rawInput || "").toLowerCase();
 
-  if (lower.includes("what's the point") || lower.includes("falling apart") || lower.includes("tired of all of it")) {
+  if (
+    lower.includes("what's the point") ||
+    lower.includes("falling apart") ||
+    lower.includes("tired of all of it")
+  ) {
     return cleanAndNormalize({}, situationId, version, rawInput);
   }
 
@@ -291,10 +369,32 @@ function getDegradedFallback(rawInput, situationId, version) {
     "favorite food",
   ];
   const hasDilemmaIndicators = [
-    "deadline", "urgent", "hospital", "money", "evict", "exam", "viva",
-    "partner", "landlord", "fail", "broken", "stolen", "sick", "fired",
-    "manager", "hr", "trouble", "scared", "stress", "help", "problem",
-    "decision", "choose", "what should i do", "kal submission", "paise"
+    "deadline",
+    "urgent",
+    "hospital",
+    "money",
+    "evict",
+    "exam",
+    "viva",
+    "partner",
+    "landlord",
+    "fail",
+    "broken",
+    "stolen",
+    "sick",
+    "fired",
+    "manager",
+    "hr",
+    "trouble",
+    "scared",
+    "stress",
+    "help",
+    "problem",
+    "decision",
+    "choose",
+    "what should i do",
+    "kal submission",
+    "paise",
   ].some((k) => lower.includes(k));
 
   if (
@@ -305,7 +405,12 @@ function getDegradedFallback(rawInput, situationId, version) {
     lower.includes("do my homework") ||
     (casualKeywords.some((k) => lower.includes(k)) && !hasDilemmaIndicators)
   ) {
-    return cleanAndNormalize({ mode: "out_of_scope" }, situationId, version, rawInput);
+    return cleanAndNormalize(
+      { mode: "out_of_scope" },
+      situationId,
+      version,
+      rawInput,
+    );
   }
 
   if (
@@ -317,7 +422,8 @@ function getDegradedFallback(rawInput, situationId, version) {
       version,
       server_time: new Date().toISOString(),
       mode: "standard",
-      summary: "Your previous email escalated the situation with your manager, and HR is now involved.",
+      summary:
+        "Your previous email escalated the situation with your manager, and HR is now involved.",
       issues: [
         {
           id: "iss_1",
@@ -332,22 +438,28 @@ function getDegradedFallback(rawInput, situationId, version) {
         {
           rank: 1,
           issue_id: "iss_1",
-          action: "Do not reply to the email thread yet. Step back and pause written communication.",
-          reason: "Replying while defensive on an escalated thread with HR creates a permanent record and increases tension.",
+          action:
+            "Do not reply to the email thread yet. Step back and pause written communication.",
+          reason:
+            "Replying while defensive on an escalated thread with HR creates a permanent record and increases tension.",
           estimated_minutes: 15,
         },
         {
           rank: 2,
           issue_id: "iss_1",
-          action: "Draft a neutral, factual timeline of what was discussed and sent in a private document.",
-          reason: "Prepares you to respond with facts rather than emotional reactions.",
+          action:
+            "Draft a neutral, factual timeline of what was discussed and sent in a private document.",
+          reason:
+            "Prepares you to respond with facts rather than emotional reactions.",
           estimated_minutes: 20,
         },
         {
           rank: 3,
           issue_id: "iss_1",
-          action: "Request a brief 1-on-1 call or in-person sync with your manager to clear misunderstandings.",
-          reason: "Direct conversation de-escalates tone misinterpretations faster than email chains.",
+          action:
+            "Request a brief 1-on-1 call or in-person sync with your manager to clear misunderstandings.",
+          reason:
+            "Direct conversation de-escalates tone misinterpretations faster than email chains.",
           estimated_minutes: 10,
         },
       ],
@@ -360,15 +472,24 @@ function getDegradedFallback(rawInput, situationId, version) {
         {
           id: "q_1",
           question: "What was your manager's primary concern in the email?",
-          options: ["Tone of email", "Missed deadline", "Involving others / Process"],
+          options: [
+            "Tone of email",
+            "Missed deadline",
+            "Involving others / Process",
+          ],
           skippable: true,
         },
       ],
-      missing_information: ["The specific wording of the manager's reply", "Company grievance process"],
+      missing_information: [
+        "The specific wording of the manager's reply",
+        "Company grievance process",
+      ],
       risk_flags: ["workplace_conflict_escalation"],
       confidence: {
         level: "high",
-        reasons: ["Standard de-escalation protocol applied for workplace conflict."],
+        reasons: [
+          "Standard de-escalation protocol applied for workplace conflict.",
+        ],
       },
       changes: [],
       support: null,
@@ -382,24 +503,45 @@ function getDegradedFallback(rawInput, situationId, version) {
     mode: "standard",
     summary: rawInput.length > 100 ? rawInput.slice(0, 97) + "..." : rawInput,
     issues: [
-      { id: "iss_1", title: "Immediate situational pressure", category: "work_study", urgency: 4, deadline: null, depends_on: [] }
+      {
+        id: "iss_1",
+        title: "Immediate situational pressure",
+        category: "work_study",
+        urgency: 4,
+        deadline: null,
+        depends_on: [],
+      },
     ],
     priorities: [
-      { rank: 1, issue_id: "iss_1", action: "Pause and list the non-negotiable constraints", reason: "De-escalates initial cognitive overwhelm", estimated_minutes: 10 }
+      {
+        rank: 1,
+        issue_id: "iss_1",
+        action: "Pause and list the non-negotiable constraints",
+        reason: "De-escalates initial cognitive overwhelm",
+        estimated_minutes: 10,
+      },
     ],
     next_action: {
       text: "Take 10 minutes to write down the single thing with the nearest deadline",
       issue_id: "iss_1",
-      why: "Immediate step to reduce uncertainty under high stress"
+      why: "Immediate step to reduce uncertainty under high stress",
     },
     clarifying_questions: [
-      { id: "q_1", question: "Which of these issues has a hard external deadline today?", options: ["Academic / Work", "Health / Family", "Money / Housing"], skippable: true }
+      {
+        id: "q_1",
+        question: "Which of these issues has a hard external deadline today?",
+        options: ["Academic / Work", "Health / Family", "Money / Housing"],
+        skippable: true,
+      },
     ],
     missing_information: ["Specific external deadlines"],
     risk_flags: ["ai_fallback_degraded"],
-    confidence: { level: "low", reasons: ["Generated via fallback engine during high AI service load."] },
+    confidence: {
+      level: "low",
+      reasons: ["Generated via fallback engine during high AI service load."],
+    },
     changes: [],
-    support: null
+    support: null,
   };
 }
 
@@ -416,14 +558,22 @@ export async function analyzeSituation({
 
   if (process.env.GEMINI_API_KEY) {
     try {
-      const prompt = buildPrompt(rawInput, clientTime, version, previousVersion);
+      const prompt = buildPrompt(
+        rawInput,
+        clientTime,
+        version,
+        previousVersion,
+      );
       rawOutput = await callGemini(prompt, process.env.GEMINI_API_KEY);
     } catch (err) {
       console.warn("Gemini API call failed:", err.message);
     }
   }
 
-  if (!rawOutput && (process.env.USE_MOCK_API === "true" || !process.env.GEMINI_API_KEY)) {
+  if (
+    !rawOutput &&
+    (process.env.USE_MOCK_API === "true" || !process.env.GEMINI_API_KEY)
+  ) {
     try {
       rawOutput = await callMockAPI(rawInput, clientTime, candidateId, chaos);
     } catch (err) {
@@ -436,7 +586,10 @@ export async function analyzeSituation({
       return cleanAndNormalize(rawOutput, situationId, version, rawInput);
     }
   } catch (err) {
-    console.warn("Failed to parse AI output, using degraded response:", err.message);
+    console.warn(
+      "Failed to parse AI output, using degraded response:",
+      err.message,
+    );
   }
 
   return getDegradedFallback(rawInput, situationId, version);
