@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Mode {
+  standard
+  support
+  out_of_scope
+  needs_clarification
+}
+
+
+enum ConfidenceLevel {
+  low
+  medium
+  high
+}
+
+
+model User {
+  id         String      @id @default(uuid())
+  email      String      @unique
+  createdAt  DateTime    @default(now())
+  situations Situation[]
+  auditLogs  AuditLog[]
+}
+
+
+model Situation {
+  id             String             @id 
+  userId         String?
+  user           User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken    String?
+  currentVersion Int                @default(1)
+  status         String             @default("active") 
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  versions       SituationVersion[]
+  @@index([userId])
+  @@index([accessToken])
+}
+
+
+model SituationVersion {
+  id                    String    @id @default(uuid())
+  situationId           String
+  situation             Situation @relation(fields: [situationId], references: [id], onDelete: Cascade)
+  version               Int
+  rawInput              String    @db.Text
+  client_time           DateTime?
+  mode                  Mode      @default(standard)
+  
+  summary               String    @db.Text
+  issues                Json      
+  priorities            Json      
+  next_action           Json?     
+  clarifying_questions  Json      
+  missing_information   Json      
+  risk_flags            Json      
+  confidence            Json      
+  changes               Json      
+  support               Json?    
+  createdAt      DateTime  @default(now())
+  @@unique([situationId, version])
+  @@index([situationId])
+}
+
+
+model IdempotencyRecord {
+  key          String   @id 
+  situationId  String?
+  status       String   
+  responseCode Int?
+  responseBody Json?
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  @@index([expiresAt])
+}
+
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action      String   
+  payload     Json?   
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+  @@index([userId])
+}
